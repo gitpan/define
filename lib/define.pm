@@ -1,10 +1,9 @@
 package define;
-
-use 5.008004;
+$define::VERSION = '1.03';
+use 5.006;
 use strict;
 use warnings;
-
-our $VERSION = '1.02';
+use Carp qw/ carp croak /;
 
 my %AllPkgs;
 my %DefPkgs;
@@ -29,8 +28,7 @@ sub import {
     }
   }
   else {
-    require Carp;
-    Carp::croak "Must call 'use define' with parameters";
+    croak "Must call 'use define' with parameters";
   }
 }
 
@@ -62,8 +60,7 @@ sub check_name {
   if( $name =~ /^__/ 
       or $name !~ /^_?[^\W_0-9]\w*\z/ 
       or $Forbidden{$name} ) {
-    require Carp;
-    Carp::croak "Define name '$name' is invalid";
+    croak "Define name '$name' is invalid";
   }
 }
 
@@ -85,8 +82,7 @@ sub makedef {
   no strict 'refs';
 
   if (defined *{$subname}{CODE}) {
-    require Carp;
-    Carp::carp "Global constant $subname redefined";
+    carp "Global constant $subname redefined";
   }
 
   if (@Vals > 1) {
@@ -94,7 +90,13 @@ sub makedef {
   }
   elsif (@Vals == 1) {
     my $val = $Vals[0];
-    *$subname = sub () { $val };
+
+    if ($val =~ /^[0-9]+$/) {
+        *$subname = eval "sub () { $val }";
+    }
+    else {
+        *$subname = sub () { $val };
+    }
   }
   else {
     *$subname = sub () { };
@@ -190,7 +192,7 @@ those in your package's namespace.
 
 =head1 NOTES
 
-See L<constant/"constant.pm">. Most of the same caveats apply here.
+See L<constant>. Most of the same caveats apply here.
 
 Your code should be arranged so that any C<no define> statements are executed 
 after the C<use define> statement for a given symbol. If the order is reversed,
@@ -203,7 +205,23 @@ If a module does define a global constant (eg. a master object), the module
 should be use'd before any other modules (or lines of code) that refer to the
 constant.
 
-If you <use define> the same symbol more than once, a warning will be emitted.
+If you define the same symbol more than once, a warning will be emitted.
+
+
+=head1 SEE ALSO
+
+L<constant> - core module for defining constants in the same way as
+this module.
+
+L<Const::Fast> - CPAN module for defining immutable variables
+(scalars, hashes, and arrays).
+
+L<constant modules|http://neilb.org/reviews/constants.html> -
+a review of CPAN modules for defining constants.
+
+=head1 REPOSITORY
+
+L<https://github.com/neilbowers/define>
 
 =head1 AUTHOR
 
@@ -215,9 +233,5 @@ Copyright (C) 2004 by Gary Gurevich
 
 This library is free software; you can redistribute it and/or modify it under 
 the same terms as Perl itself.
-
-=head1 SEE ALSO
-
-constant(3), perl(1).
 
 =cut
